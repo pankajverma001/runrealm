@@ -8,6 +8,7 @@ type Point = [number, number];
 
 export default function Dashboard() {
   const mapRef = useRef<MapRef | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   const [location, setLocation] = useState({
     longitude: 74.6269,
@@ -23,9 +24,11 @@ export default function Dashboard() {
       return;
     }
 
+    if (watchIdRef.current !== null) return;
+
     setTracking(true);
 
-    navigator.geolocation.watchPosition(
+    watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const lng = position.coords.longitude;
         const lat = position.coords.latitude;
@@ -47,6 +50,15 @@ export default function Dashboard() {
         timeout: 10000,
       }
     );
+  }
+
+  function stopTracking() {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    setTracking(false);
   }
 
   const routeGeoJson = {
@@ -93,16 +105,24 @@ export default function Dashboard() {
 
       <div className="absolute left-4 top-4 z-10 rounded-2xl bg-black/80 p-4 text-white">
         <h1 className="text-xl font-bold text-green-400">RunRealm</h1>
-        <p className="mt-1 text-sm text-gray-300">
-          Points: {route.length}
-        </p>
 
-        <button
-          onClick={startTracking}
-          className="mt-4 rounded-xl bg-green-500 px-5 py-3 font-bold text-black"
-        >
-          {tracking ? "Tracking..." : "Start Run"}
-        </button>
+        <p className="mt-1 text-sm text-gray-300">Points: {route.length}</p>
+
+        {!tracking ? (
+          <button
+            onClick={startTracking}
+            className="mt-4 rounded-xl bg-green-500 px-5 py-3 font-bold text-black"
+          >
+            Start Run
+          </button>
+        ) : (
+          <button
+            onClick={stopTracking}
+            className="mt-4 rounded-xl bg-red-500 px-5 py-3 font-bold text-white"
+          >
+            Stop Run
+          </button>
+        )}
       </div>
     </main>
   );
