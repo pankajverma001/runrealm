@@ -34,7 +34,26 @@ export default function Dashboard() {
         const lat = position.coords.latitude;
 
         setLocation({ longitude: lng, latitude: lat });
-        setRoute((oldRoute) => [...oldRoute, [lng, lat]]);
+        setRoute((oldRoute) => {
+  if (oldRoute.length === 0) {
+    return [[lng, lat]];
+  }
+
+  const lastPoint = oldRoute[oldRoute.length - 1];
+
+  const distance =
+    Math.sqrt(
+      Math.pow(lng - lastPoint[0], 2) +
+      Math.pow(lat - lastPoint[1], 2)
+    );
+
+  // Ignore tiny GPS movements
+  if (distance < 0.0001) {
+    return oldRoute;
+  }
+
+  return [...oldRoute, [lng, lat]];
+});
 
         mapRef.current?.flyTo({
           center: [lng, lat],
