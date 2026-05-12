@@ -1,32 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import Map, { Marker } from "react-map-gl";
+import { useRef, useState } from "react";
+import Map, { Marker, Source, Layer, MapRef } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+type Point = [number, number];
+
 export default function Dashboard() {
+  const mapRef = useRef<MapRef | null>(null);
+
   const [location, setLocation] = useState({
     longitude: 74.6269,
-    latitude: 30.9010,
+    latitude: 30.901,
   });
 
-  function findMyLocation() {
-    navigator.geolocation.getCurrentPosition(
+  const [route, setRoute] = useState<Point[]>([]);
+  const [tracking, setTracking] = useState(false);
+
+  function startTracking() {
+    if (!navigator.geolocation) {
+      alert("GPS not supported");
+      return;
+    }
+
+    setTracking(true);
+
+    navigator.geolocation.watchPosition(
       (position) => {
-        setLocation({
-          longitude: position.coords.longitude,
-          latitude: position.coords.latitude,
+        const lng = position.coords.longitude;
+        const lat = position.coords.latitude;
+
+        setLocation({ longitude: lng, latitude: lat });
+        setRoute((oldRoute) => [...oldRoute, [lng, lat]]);
+
+        mapRef.current?.flyTo({
+          center: [lng, lat],
+          zoom: 16,
         });
       },
       (error) => {
         alert(error.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000,
       }
     );
   }
 
+  const routeGeoJson = {
+    type: "Feature" as const,
+    geometry: {
+      type: "LineString" as const,
+      coordinates: route,
+    },
+    properties: {},
+  };
+
   return (
-    <main className="relative w-screen h-screen">
+    <main className="relative h-screen w-screen bg-black">
       <Map
+        ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
         initialViewState={{
           longitude: location.longitude,
@@ -36,6 +71,19 @@ export default function Dashboard() {
         style={{ width: "100vw", height: "100vh" }}
         mapStyle="mapbox://styles/mapbox/dark-v11"
       >
+        {route.length > 1 && (
+          <Source id="running-route" type="geojson" data={routeGeoJson}>
+            <Layer
+              id="running-route-line"
+              type="line"
+              paint={{
+                "line-color": "#22c55e",
+                "line-width": 5,
+              }}
+            />
+          </Source>
+        )}
+
         <Marker
           longitude={location.longitude}
           latitude={location.latitude}
@@ -43,12 +91,19 @@ export default function Dashboard() {
         />
       </Map>
 
-      <button
-        onClick={findMyLocation}
-        className="absolute top-4 left-4 z-10 rounded-xl bg-green-500 px-5 py-3 font-bold text-black"
-      >
-        Find My Location
-      </button>
+      <div className="absolute left-4 top-4 z-10 rounded-2xl bg-black/80 p-4 text-white">
+        <h1 className="text-xl font-bold text-green-400">RunRealm</h1>
+        <p className="mt-1 text-sm text-gray-300">
+          Points: {route.length}
+        </p>
+
+        <button
+          onClick={startTracking}
+          className="mt-4 rounded-xl bg-green-500 px-5 py-3 font-bold text-black"
+        >
+          {tracking ? "Tracking..." : "Start Run"}
+        </button>
+      </div>
     </main>
   );
 }
