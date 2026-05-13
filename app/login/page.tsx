@@ -12,7 +12,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "https://runrealm.vercel.app/dashboard",
+        redirectTo: "https://runrealm.vercel.app/dashboard"
       },
     });
   }
