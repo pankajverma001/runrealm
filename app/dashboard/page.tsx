@@ -9,6 +9,7 @@ type Point = [number, number];
 export default function Dashboard() {
   const mapRef = useRef<MapRef | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [location, setLocation] = useState({
     longitude: 74.6269,
@@ -34,6 +35,14 @@ export default function Dashboard() {
         const lat = position.coords.latitude;
 
         setLocation({ longitude: lng, latitude: lat });
+        if (idleTimerRef.current) {
+  clearTimeout(idleTimerRef.current);
+}
+
+idleTimerRef.current = setTimeout(() => {
+  stopTracking();
+  alert("Run auto-stopped because no movement was detected.");
+}, 3 * 60 * 1000);
         setRoute((oldRoute) => {
   if (oldRoute.length === 0) {
     return [[lng, lat]];
@@ -78,6 +87,10 @@ export default function Dashboard() {
     }
 
     setTracking(false);
+    if (idleTimerRef.current) {
+  clearTimeout(idleTimerRef.current);
+  idleTimerRef.current = null;
+}
   }
 
   const routeGeoJson = {
